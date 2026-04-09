@@ -81,8 +81,30 @@ Flow:
 1. Fetch pinned artifact bytes.
 2. Generate manifest with sha256 file hashes and loader sha384 SRI.
 3. Verify integrity.
-4. Open release PR when `dryRun=false`.
+4. Stage a GitHub Pages bundle when `dryRun=false`.
+5. Open release PR when `dryRun=false`.
+6. Deploy staged bundle to GitHub Pages when `dryRun=false`.
+
+## Production release runbook (GitHub Pages)
+
+1. Go to `Actions` -> `Release EmulatorJS` -> `Run workflow`.
+2. Set:
+   - `emulatorjsVersion` to the pinned tag (for example `4.2.3`)
+   - `sourceUrl` to matching upstream archive URL
+   - `dryRun=false` for production publish
+3. Confirm the run finishes both `release` and `deploy` jobs.
+4. Merge the generated release PR.
+
+Published URL pattern:
+
+- `https://<org-or-user>.github.io/<repo>/third-party/emulatorjs/<version>/`
+- `https://<org-or-user>.github.io/<repo>/manifests/third-party/emulatorjs/<version>.json`
+
+Use the manifest to pin both values in your app:
+
+- `emulatorJsPathToData = https://<org-or-user>.github.io/<repo>/third-party/emulatorjs/<version>/`
+- `emulatorJsLoaderIntegrity = <manifest.entrypoints.loader.sri.sha384>`
 
 ## Publish strategy
 
-The publish step is intentionally pluggable. Wire `scripts/release-emulatorjs.mjs` to your static host deploy target (GitHub Pages, Cloudflare Pages, S3+CDN, etc.) while preserving immutable version directories.
+The release script now stages a GitHub Pages artifact in `.pages-dist` during non-dry-run releases. The workflow uploads that directory and deploys it with official GitHub Pages actions. Keep all paths immutable under versioned directories.

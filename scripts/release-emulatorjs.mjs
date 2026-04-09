@@ -13,6 +13,7 @@ if (args.artifact && args.artifact !== "emulatorjs") {
 const version = args.version;
 const sourceUrl = args.sourceUrl;
 const dryRun = String(args.dryRun ?? "true") !== "false";
+const pagesOutDir = args.pagesOutDir ?? ".pages-dist";
 
 const script = (file) => path.join(process.cwd(), "scripts", file);
 const passthrough = [];
@@ -32,5 +33,18 @@ await execFileAsync("node", [script("verify-manifest.mjs"), ...passthrough], {
 if (dryRun) {
   console.log("Dry run complete. Publish step skipped.");
 } else {
-  console.log("Publish hook placeholder: wire your static host deployment here.");
+  await execFileAsync(
+    "node",
+    [
+      script("stage-pages.mjs"),
+      "--artifact",
+      "emulatorjs",
+      "--version",
+      String(version),
+      "--outDir",
+      String(pagesOutDir)
+    ],
+    { stdio: "inherit" }
+  );
+  console.log(`Prepared GitHub Pages bundle in ${pagesOutDir}.`);
 }

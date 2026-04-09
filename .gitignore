@@ -5,3 +5,4 @@ artifacts/*
 manifests/*
 !manifests/.gitkeep
 coverage/
+.pages-dist/

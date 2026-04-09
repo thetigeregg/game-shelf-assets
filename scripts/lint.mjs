@@ -7,6 +7,7 @@ await execFileAsync("node", ["--check", "scripts/fetch-emulatorjs.mjs"], { stdio
 await execFileAsync("node", ["--check", "scripts/generate-manifest.mjs"], { stdio: "inherit" });
 await execFileAsync("node", ["--check", "scripts/verify-manifest.mjs"], { stdio: "inherit" });
 await execFileAsync("node", ["--check", "scripts/release-emulatorjs.mjs"], { stdio: "inherit" });
+await execFileAsync("node", ["--check", "scripts/stage-pages.mjs"], { stdio: "inherit" });
 await execFileAsync("node", ["--check", "scripts/lib/artifacts.mjs"], { stdio: "inherit" });
 await execFileAsync("npx", ["tsc", "--noEmit"], { stdio: "inherit" });
 
