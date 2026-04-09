@@ -6,3 +6,6 @@ manifests/*
 !manifests/.gitkeep
 coverage/
 .pages-dist/
+/worktrees/
+.pr-review-prompt.md
+.pr-agent-prompt.md
