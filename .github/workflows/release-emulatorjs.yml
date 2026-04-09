@@ -1,0 +1,50 @@
+name: Release EmulatorJS
+
+on:
+  workflow_dispatch:
+    inputs:
+      emulatorjsVersion:
+        description: "Pinned EmulatorJS version"
+        required: true
+        type: string
+      sourceUrl:
+        description: "Source archive URL"
+        required: true
+        type: string
+      dryRun:
+        description: "Skip publish step"
+        required: true
+        default: true
+        type: boolean
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: |
+          node scripts/release-emulatorjs.mjs \
+            --artifact emulatorjs \
+            --version "${{ inputs.emulatorjsVersion }}" \
+            --sourceUrl "${{ inputs.sourceUrl }}" \
+            --dryRun "${{ inputs.dryRun }}"
+      - name: Open automated PR
+        if: ${{ inputs.dryRun == false }}
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: chore/release-emulatorjs-${{ inputs.emulatorjsVersion }}
+          title: "release(emulatorjs): ${{ inputs.emulatorjsVersion }}"
+          commit-message: "release(emulatorjs): publish ${{ inputs.emulatorjsVersion }}"
+          body: |
+            ## Summary
+            - fetched pinned EmulatorJS artifacts
+            - generated immutable manifest with SRI
+            - verified artifact integrity before publish
