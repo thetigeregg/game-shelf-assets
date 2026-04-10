@@ -7,5 +7,4 @@ manifests/*
 coverage/
 .pages-dist/
 /worktrees/
-.pr-review-prompt.md
-.pr-agent-prompt.md
+prompts/
