@@ -5,7 +5,7 @@
   "description": "Immutable third-party asset publisher for Game Shelf",
   "type": "module",
   "engines": {
-    "node": ">=20.19.0"
+    "node": ">=24.14.0"
   },
   "scripts": {
     "lint": "node scripts/lint.mjs",
