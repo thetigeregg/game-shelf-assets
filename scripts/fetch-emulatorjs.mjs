@@ -14,6 +14,7 @@ import {
   readJson,
   writeJson,
 } from './lib/artifacts.mjs';
+import { archiveKindFromUrl } from './lib/emulatorjs-archive.mjs';
 
 const execFileAsync = promisify(execFile);
 const args = parseArgs(process.argv.slice(2));
@@ -25,13 +26,6 @@ const sourceSubdir = args.sourceSubdir ?? config.sourceSubdir;
 
 if (!version || !sourceUrl || !sourceSubdir) {
   throw new Error('version, sourceUrl, and sourceSubdir are required');
-}
-
-/** @param {string} url */
-function archiveKindFromUrl(url) {
-  const pathname = new URL(url).pathname.toLowerCase();
-  if (pathname.endsWith('.7z')) return '7z';
-  return 'tar.gz';
 }
 
 /** @param {Response} response @param {string} destPath */
@@ -70,15 +64,15 @@ if (!(await pathExists(sourcePath))) {
   throw new Error(`sourceSubdir does not exist in archive: ${sourceSubdir}`);
 }
 
-await fs.mkdir(path.dirname(outDir), { recursive: true });
-await fs.cp(sourcePath, outDir, { recursive: true });
-
-const coresReports = path.join(outDir, 'cores', 'reports');
+const coresReports = path.join(sourcePath, 'cores', 'reports');
 if (!(await pathExists(coresReports))) {
   throw new Error(
     'Fetched data is missing cores/reports. Use the GitHub release .7z asset, not the tag source tarball.'
   );
 }
+
+await fs.mkdir(path.dirname(outDir), { recursive: true });
+await fs.cp(sourcePath, outDir, { recursive: true });
 
 const metadata = {
   artifactName: 'emulatorjs',
