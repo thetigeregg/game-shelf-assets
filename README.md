@@ -33,10 +33,12 @@ Example:
 {
   "artifactName": "emulatorjs",
   "version": "4.2.3",
-  "sourceUrl": "https://github.com/EmulatorJS/EmulatorJS/archive/refs/tags/v4.2.3.tar.gz",
-  "sourceSubdir": "EmulatorJS-4.2.3/stable/data"
+  "sourceUrl": "https://github.com/EmulatorJS/EmulatorJS/releases/download/v4.2.3/4.2.3.7z",
+  "sourceSubdir": "data"
 }
 ```
+
+Use the **GitHub release** `.7z` asset (`releases/download/v<tag>/<version>.7z`), not the tag **source** tarball: the tarball’s `data/cores/` does not include WASM/data blobs, so hosted cores would 404. Local `npm run artifact:fetch:emulatorjs` requires the `7z` CLI (macOS: `brew install p7zip`; Debian/Ubuntu: `p7zip-full`).
 
 ## Manifest contract
 
@@ -90,7 +92,7 @@ Flow:
 1. Go to `Actions` -> `Release EmulatorJS` -> `Run workflow`.
 2. Set:
    - `emulatorjsVersion` to the pinned tag (for example `4.2.3`)
-   - `sourceUrl` to matching upstream archive URL
+   - `sourceUrl` to the matching **release** asset, for example `https://github.com/EmulatorJS/EmulatorJS/releases/download/v4.2.3/4.2.3.7z` (same version in path and filename)
    - `dryRun=false` for production publish
 3. Confirm the run finishes both `release` and `deploy` jobs.
 4. Merge the generated release PR.
