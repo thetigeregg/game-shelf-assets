@@ -17,6 +17,7 @@ import {
 import { archiveKindFromUrl } from './lib/emulatorjs-archive.mjs';
 import {
   assert7zMemberPathsSafe,
+  assertExtractedTreeHasNoSymlinks,
   assertTarMemberPathsSafe,
   gnuTarExtractSafetyFlags,
 } from './lib/safe-archive-extract.mjs';
@@ -69,6 +70,8 @@ try {
     const tarExtra = await gnuTarExtractSafetyFlags();
     await execFileAsync('tar', ['-xzf', archivePath, '-C', extractDir, ...tarExtra]);
   }
+
+  await assertExtractedTreeHasNoSymlinks(extractDir);
 
   const sourcePath = path.join(extractDir, sourceSubdir);
   if (!(await pathExists(sourcePath))) {

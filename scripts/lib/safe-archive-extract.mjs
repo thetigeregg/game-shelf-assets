@@ -1,3 +1,4 @@
+import fs from 'node:fs/promises';
 import path from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -6,6 +7,21 @@ const execFileAsync = promisify(execFile);
 
 /** Large archives can have long listings; cap avoids unbounded memory. */
 const LIST_MAX_BUFFER = 100 * 1024 * 1024;
+
+/**
+ * True when path.relative(root, resolved) denotes escaping the root (zip-slip), including
+ * cross-drive results on Windows (absolute relative).
+ * Does not treat `..foo` as `..` + segment — only real `..` path segments.
+ * @param {string} rootResolved
+ * @param {string} resolvedMember
+ */
+export function resolvedRelativeEscapesExtractRoot(rootResolved, resolvedMember) {
+  const relativeToRoot = path.relative(rootResolved, resolvedMember);
+  if (path.isAbsolute(relativeToRoot)) return true;
+  if (relativeToRoot === '..') return true;
+  if (relativeToRoot.startsWith('..' + path.sep)) return true;
+  return false;
+}
 
 /**
  * Ensures a member path cannot escape extractDir (zip-slip / absolute paths).
@@ -19,12 +35,37 @@ export function assertArchiveMemberInsideExtractDir(extractDir, memberPath) {
 
   const rel = raw.replace(/[/\\]+$/, '');
   const resolved = path.resolve(root, rel);
-  const relativeToRoot = path.relative(root, resolved);
-  if (relativeToRoot.startsWith('..') || path.isAbsolute(relativeToRoot)) {
+  if (resolvedRelativeEscapesExtractRoot(root, resolved)) {
     throw new Error(
       `Refusing archive: member path escapes extraction directory (${JSON.stringify(memberPath)})`
     );
   }
+}
+
+/**
+ * Walks the extracted tree and rejects any symbolic link (mitigates symlink-based escapes
+ * during/after extraction). Intended for an empty extract root populated only by the archive.
+ * @param {string} rootDir
+ */
+export async function assertExtractedTreeHasNoSymlinks(rootDir) {
+  const root = path.resolve(rootDir);
+
+  async function walk(currentAbs) {
+    const st = await fs.lstat(currentAbs);
+    if (st.isSymbolicLink()) {
+      const rel = path.relative(root, currentAbs);
+      throw new Error(
+        `Refusing archive: symbolic link in extracted tree (${JSON.stringify(rel || '.')})`
+      );
+    }
+    if (!st.isDirectory()) return;
+    const names = await fs.readdir(currentAbs);
+    for (const name of names) {
+      await walk(path.join(currentAbs, name));
+    }
+  }
+
+  await walk(root);
 }
 
 /**

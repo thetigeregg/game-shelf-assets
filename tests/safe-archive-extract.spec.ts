@@ -1,6 +1,10 @@
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 import { describe, expect, test } from 'vitest';
 import {
   assertArchiveMemberInsideExtractDir,
+  assertExtractedTreeHasNoSymlinks,
   memberPathsFrom7zSltListing,
 } from '../scripts/lib/safe-archive-extract.mjs';
 
@@ -10,6 +14,10 @@ describe('assertArchiveMemberInsideExtractDir', () => {
   test('allows normal relative paths', () => {
     expect(() => assertArchiveMemberInsideExtractDir(root, 'data/file.js')).not.toThrow();
     expect(() => assertArchiveMemberInsideExtractDir(root, 'data/sub/')).not.toThrow();
+  });
+
+  test('allows names that start with .. as a prefix (not a parent segment)', () => {
+    expect(() => assertArchiveMemberInsideExtractDir(root, '..foo/bar')).not.toThrow();
   });
 
   test('rejects parent traversal', () => {
@@ -59,5 +67,29 @@ Size = 1
   test('without separator, skips Path equal to archive path when provided', () => {
     const noSep = 'Path = /abs/archive.7z\nType = 7z\n\nPath = safe/file.txt\n';
     expect(memberPathsFrom7zSltListing(noSep, '/abs/archive.7z')).toEqual(['safe/file.txt']);
+  });
+});
+
+describe('assertExtractedTreeHasNoSymlinks', () => {
+  test('allows a tree with only files and directories', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'nosym-extract-'));
+    try {
+      await fs.mkdir(path.join(dir, 'a'), { recursive: true });
+      await fs.writeFile(path.join(dir, 'a', 'b.txt'), 'x');
+      await expect(assertExtractedTreeHasNoSymlinks(dir)).resolves.toBeUndefined();
+    } finally {
+      await fs.rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('rejects trees that contain a symlink', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'sym-extract-'));
+    try {
+      await fs.writeFile(path.join(dir, 'f'), 'x');
+      await fs.symlink('f', path.join(dir, 'l'));
+      await expect(assertExtractedTreeHasNoSymlinks(dir)).rejects.toThrow(/symbolic link/);
+    } finally {
+      await fs.rm(dir, { recursive: true, force: true });
+    }
   });
 });
