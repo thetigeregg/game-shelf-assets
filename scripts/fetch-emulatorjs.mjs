@@ -43,48 +43,54 @@ if (await pathExists(outDir)) {
 
 const archiveKind = archiveKindFromUrl(sourceUrl);
 const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'emulatorjs-fetch-'));
-const archivePath = path.join(tmpDir, archiveKind === '7z' ? 'source.7z' : 'source.tar.gz');
-const extractDir = path.join(tmpDir, 'extract');
-await fs.mkdir(extractDir, { recursive: true });
+try {
+  const archivePath = path.join(tmpDir, archiveKind === '7z' ? 'source.7z' : 'source.tar.gz');
+  const extractDir = path.join(tmpDir, 'extract');
+  await fs.mkdir(extractDir, { recursive: true });
 
-const response = await fetch(sourceUrl);
-if (!response.ok) {
-  throw new Error(`Failed to download source: ${response.status} ${response.statusText}`);
+  const response = await fetch(sourceUrl);
+  if (!response.ok) {
+    throw new Error(`Failed to download source: ${response.status} ${response.statusText}`);
+  }
+  await downloadToFile(response, archivePath);
+
+  if (archiveKind === '7z') {
+    await execFileAsync('7z', ['x', '-y', archivePath, `-o${extractDir}`], {
+      stdio: 'inherit',
+    });
+  } else {
+    await execFileAsync('tar', ['-xzf', archivePath, '-C', extractDir]);
+  }
+
+  const sourcePath = path.join(extractDir, sourceSubdir);
+  if (!(await pathExists(sourcePath))) {
+    throw new Error(`sourceSubdir does not exist in archive: ${sourceSubdir}`);
+  }
+
+  const coresReports = path.join(sourcePath, 'cores', 'reports');
+  if (!(await pathExists(coresReports))) {
+    throw new Error(
+      'Fetched data is missing cores/reports. Use the GitHub release .7z asset, not the tag source tarball.'
+    );
+  }
+
+  await fs.mkdir(path.dirname(outDir), { recursive: true });
+  await fs.cp(sourcePath, outDir, { recursive: true });
+
+  const metadata = {
+    artifactName: 'emulatorjs',
+    version,
+    source: {
+      url: sourceUrl,
+      sourceSubdir,
+      archiveFormat: archiveKind,
+      fetchedAt: new Date().toISOString(),
+    },
+  };
+
+  await writeJson(path.join(outDir, '_source.json'), metadata);
+} finally {
+  await fs.rm(tmpDir, { recursive: true, force: true });
 }
-await downloadToFile(response, archivePath);
 
-if (archiveKind === '7z') {
-  await execFileAsync('7z', ['x', '-y', archivePath, `-o${extractDir}`]);
-} else {
-  await execFileAsync('tar', ['-xzf', archivePath, '-C', extractDir]);
-}
-
-const sourcePath = path.join(extractDir, sourceSubdir);
-if (!(await pathExists(sourcePath))) {
-  throw new Error(`sourceSubdir does not exist in archive: ${sourceSubdir}`);
-}
-
-const coresReports = path.join(sourcePath, 'cores', 'reports');
-if (!(await pathExists(coresReports))) {
-  throw new Error(
-    'Fetched data is missing cores/reports. Use the GitHub release .7z asset, not the tag source tarball.'
-  );
-}
-
-await fs.mkdir(path.dirname(outDir), { recursive: true });
-await fs.cp(sourcePath, outDir, { recursive: true });
-
-const metadata = {
-  artifactName: 'emulatorjs',
-  version,
-  source: {
-    url: sourceUrl,
-    sourceSubdir,
-    archiveFormat: archiveKind,
-    fetchedAt: new Date().toISOString(),
-  },
-};
-
-await writeJson(path.join(outDir, '_source.json'), metadata);
-await fs.rm(tmpDir, { recursive: true, force: true });
 console.log(`Fetched emulatorjs ${version} into ${outDir}`);

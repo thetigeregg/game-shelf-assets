@@ -18,10 +18,19 @@ describe('archiveKindFromUrl', () => {
     expect(archiveKindFromUrl('https://example.com/pkg.7z?token=abc')).toBe('7z');
   });
 
-  test('defaults to tar.gz for non-.7z archives', () => {
+  test('detects .tar.gz tag archives', () => {
     expect(
       archiveKindFromUrl('https://github.com/EmulatorJS/EmulatorJS/archive/refs/tags/v4.2.3.tar.gz')
     ).toBe('tar.gz');
+  });
+
+  test('detects .tgz as tar.gz', () => {
+    expect(archiveKindFromUrl('https://example.com/release.tgz')).toBe('tar.gz');
+  });
+
+  test('rejects unsupported archive suffixes', () => {
+    expect(() => archiveKindFromUrl('https://example.com/pkg.zip')).toThrow(/Unsupported archive/);
+    expect(() => archiveKindFromUrl('https://example.com/src.tar')).toThrow(/Unsupported archive/);
   });
 
   test('rejects invalid URLs', () => {
