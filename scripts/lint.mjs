@@ -12,6 +12,9 @@ await execFileAsync('node', ['--check', 'scripts/lib/artifacts.mjs'], { stdio: '
 await execFileAsync('node', ['--check', 'scripts/lib/emulatorjs-archive.mjs'], {
   stdio: 'inherit',
 });
+await execFileAsync('node', ['--check', 'scripts/lib/safe-archive-extract.mjs'], {
+  stdio: 'inherit',
+});
 await execFileAsync('npx', ['tsc', '--noEmit'], { stdio: 'inherit' });
 
 console.log('Lint checks passed.');

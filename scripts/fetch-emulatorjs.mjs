@@ -15,6 +15,11 @@ import {
   writeJson,
 } from './lib/artifacts.mjs';
 import { archiveKindFromUrl } from './lib/emulatorjs-archive.mjs';
+import {
+  assert7zMemberPathsSafe,
+  assertTarMemberPathsSafe,
+  gnuTarExtractSafetyFlags,
+} from './lib/safe-archive-extract.mjs';
 
 const execFileAsync = promisify(execFile);
 const args = parseArgs(process.argv.slice(2));
@@ -55,11 +60,14 @@ try {
   await downloadToFile(response, archivePath);
 
   if (archiveKind === '7z') {
+    await assert7zMemberPathsSafe(archivePath, extractDir);
     await execFileAsync('7z', ['x', '-y', archivePath, `-o${extractDir}`], {
       stdio: 'inherit',
     });
   } else {
-    await execFileAsync('tar', ['-xzf', archivePath, '-C', extractDir]);
+    await assertTarMemberPathsSafe(archivePath, extractDir);
+    const tarExtra = await gnuTarExtractSafetyFlags();
+    await execFileAsync('tar', ['-xzf', archivePath, '-C', extractDir, ...tarExtra]);
   }
 
   const sourcePath = path.join(extractDir, sourceSubdir);
