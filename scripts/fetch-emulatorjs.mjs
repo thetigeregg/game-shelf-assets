@@ -2,10 +2,8 @@ import { createWriteStream } from 'node:fs';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { execFile } from 'node:child_process';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import { promisify } from 'node:util';
 import {
   ARTIFACTS_DIR,
   CONFIG_DIR,
@@ -21,8 +19,8 @@ import {
   assertTarMemberPathsSafe,
   gnuTarExtractSafetyFlags,
 } from './lib/safe-archive-extract.mjs';
+import { runWithInherit } from './lib/run-with-inherit.mjs';
 
-const execFileAsync = promisify(execFile);
 const args = parseArgs(process.argv.slice(2));
 const configPath = path.join(CONFIG_DIR, 'emulatorjs.json');
 const config = await readJson(configPath);
@@ -62,13 +60,11 @@ try {
 
   if (archiveKind === '7z') {
     await assert7zMemberPathsSafe(archivePath, extractDir);
-    await execFileAsync('7z', ['x', '-y', archivePath, `-o${extractDir}`], {
-      stdio: 'inherit',
-    });
+    await runWithInherit('7z', ['x', '-y', archivePath, `-o${extractDir}`]);
   } else {
     await assertTarMemberPathsSafe(archivePath, extractDir);
     const tarExtra = await gnuTarExtractSafetyFlags();
-    await execFileAsync('tar', ['-xzf', archivePath, '-C', extractDir, ...tarExtra]);
+    await runWithInherit('tar', ['-xzf', archivePath, '-C', extractDir, ...tarExtra]);
   }
 
   await assertExtractedTreeHasNoSymlinks(extractDir);
