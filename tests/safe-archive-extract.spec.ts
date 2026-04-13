@@ -29,6 +29,12 @@ describe('assertArchiveMemberInsideExtractDir', () => {
     );
   });
 
+  test('treats backslashes as separators so Windows-style traversal is caught on POSIX', () => {
+    expect(() => assertArchiveMemberInsideExtractDir(root, 'a\\..\\..\\b')).toThrow(
+      /escapes extraction directory/
+    );
+  });
+
   test('rejects absolute paths', () => {
     expect(() => assertArchiveMemberInsideExtractDir(root, '/etc/passwd')).toThrow(
       /escapes extraction directory/
@@ -88,6 +94,19 @@ describe('assertExtractedTreeHasNoSymlinks', () => {
       await fs.writeFile(path.join(dir, 'f'), 'x');
       await fs.symlink('f', path.join(dir, 'l'));
       await expect(assertExtractedTreeHasNoSymlinks(dir)).rejects.toThrow(/symbolic link/);
+    } finally {
+      await fs.rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('rejects trees that contain hard-linked files', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'hardlink-extract-'));
+    try {
+      const a = path.join(dir, 'a');
+      const b = path.join(dir, 'b');
+      await fs.writeFile(a, 'x');
+      await fs.link(a, b);
+      await expect(assertExtractedTreeHasNoSymlinks(dir)).rejects.toThrow(/hard-linked file/);
     } finally {
       await fs.rm(dir, { recursive: true, force: true });
     }

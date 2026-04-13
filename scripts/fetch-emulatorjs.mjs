@@ -15,6 +15,7 @@ import {
 import { archiveKindFromUrl } from './lib/emulatorjs-archive.mjs';
 import {
   assert7zMemberPathsSafe,
+  assertArchiveMemberInsideExtractDir,
   assertExtractedTreeHasNoSymlinks,
   assertTarMemberPathsSafe,
   gnuTarExtractSafetyFlags,
@@ -69,15 +70,22 @@ try {
 
   await assertExtractedTreeHasNoSymlinks(extractDir);
 
+  assertArchiveMemberInsideExtractDir(extractDir, sourceSubdir);
   const sourcePath = path.join(extractDir, sourceSubdir);
   if (!(await pathExists(sourcePath))) {
     throw new Error(`sourceSubdir does not exist in archive: ${sourceSubdir}`);
   }
 
   const coresReports = path.join(sourcePath, 'cores', 'reports');
-  if (!(await pathExists(coresReports))) {
+  let coresReportsStat;
+  try {
+    coresReportsStat = await fs.stat(coresReports);
+  } catch {
+    coresReportsStat = null;
+  }
+  if (!coresReportsStat?.isDirectory()) {
     throw new Error(
-      'Fetched data is missing cores/reports. Use the GitHub release .7z asset, not the tag source tarball.'
+      'Fetched data is missing cores/reports directory. Use the GitHub release .7z asset, not the tag source tarball.'
     );
   }
 

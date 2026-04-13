@@ -9,6 +9,18 @@ const execFileAsync = promisify(execFile);
 const LIST_MAX_BUFFER = 100 * 1024 * 1024;
 
 /**
+ * Normalize archive member paths so backslashes act as separators (Windows-style paths in
+ * listings are not missed on POSIX, where `\\` would otherwise be a literal character).
+ * @param {string} memberPath
+ */
+export function normalizeArchiveMemberPath(memberPath) {
+  return String(memberPath)
+    .trim()
+    .replace(/[/\\]+$/, '')
+    .replace(/\\/g, '/');
+}
+
+/**
  * True when path.relative(root, resolved) denotes escaping the root (zip-slip), including
  * cross-drive results on Windows (absolute relative).
  * Does not treat `..foo` as `..` + segment — only real `..` path segments.
@@ -30,10 +42,9 @@ export function resolvedRelativeEscapesExtractRoot(rootResolved, resolvedMember)
  */
 export function assertArchiveMemberInsideExtractDir(extractDir, memberPath) {
   const root = path.resolve(extractDir);
-  const raw = String(memberPath).trim();
-  if (!raw) return;
+  const rel = normalizeArchiveMemberPath(memberPath);
+  if (!rel) return;
 
-  const rel = raw.replace(/[/\\]+$/, '');
   const resolved = path.resolve(root, rel);
   if (resolvedRelativeEscapesExtractRoot(root, resolved)) {
     throw new Error(
@@ -43,8 +54,9 @@ export function assertArchiveMemberInsideExtractDir(extractDir, memberPath) {
 }
 
 /**
- * Walks the extracted tree and rejects any symbolic link (mitigates symlink-based escapes
- * during/after extraction). Intended for an empty extract root populated only by the archive.
+ * Walks the extracted tree and rejects symbolic links and multiply hard-linked files (mitigates
+ * symlink / hardlink tricks during extraction). Intended for an empty extract root populated
+ * only by the archive.
  * @param {string} rootDir
  */
 export async function assertExtractedTreeHasNoSymlinks(rootDir) {
@@ -56,6 +68,12 @@ export async function assertExtractedTreeHasNoSymlinks(rootDir) {
       const rel = path.relative(root, currentAbs);
       throw new Error(
         `Refusing archive: symbolic link in extracted tree (${JSON.stringify(rel || '.')})`
+      );
+    }
+    if (st.isFile() && st.nlink > 1) {
+      const rel = path.relative(root, currentAbs);
+      throw new Error(
+        `Refusing archive: hard-linked file in extracted tree (${JSON.stringify(rel || '.')})`
       );
     }
     if (!st.isDirectory()) return;

@@ -36,4 +36,10 @@ describe('archiveKindFromUrl', () => {
   test('rejects invalid URLs', () => {
     expect(() => archiveKindFromUrl('not-a-url')).toThrow();
   });
+
+  test('invalid URL errors redact query strings (no secret echo)', () => {
+    expect(() => archiveKindFromUrl('not-a-url?token=supersecret')).toThrow(
+      /Invalid source URL: \[invalid url\]/
+    );
+  });
 });
