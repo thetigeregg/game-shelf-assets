@@ -1,12 +1,19 @@
+import { execFile } from 'node:child_process';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { promisify } from 'node:util';
 import { describe, expect, test } from 'vitest';
 import {
+  assert7zSltMemberSectionSafe,
   assertArchiveMemberInsideExtractDir,
   assertExtractedTreeHasNoSymlinks,
+  assertTarMemberPathsSafe,
+  assertTarVerboseListingTypeAllowed,
   memberPathsFrom7zSltListing,
 } from '../scripts/lib/safe-archive-extract.mjs';
+
+const execFileAsync = promisify(execFile);
 
 describe('assertArchiveMemberInsideExtractDir', () => {
   const root = '/tmp/emulatorjs-extract-test';
@@ -44,6 +51,89 @@ describe('assertArchiveMemberInsideExtractDir', () => {
   test('ignores empty lines', () => {
     expect(() => assertArchiveMemberInsideExtractDir(root, '   ')).not.toThrow();
     expect(() => assertArchiveMemberInsideExtractDir(root, '')).not.toThrow();
+  });
+});
+
+describe('assertTarVerboseListingTypeAllowed', () => {
+  test('allows files, dirs, and pax header rows', () => {
+    expect(() =>
+      assertTarVerboseListingTypeAllowed('-rw-r--r-- 0 u g 1 2000-01-01 00:00 a')
+    ).not.toThrow();
+    expect(() =>
+      assertTarVerboseListingTypeAllowed('drwxr-xr-x 0 u g 0 2000-01-01 00:00 d/')
+    ).not.toThrow();
+    expect(() => assertTarVerboseListingTypeAllowed('g blah')).not.toThrow();
+    expect(() => assertTarVerboseListingTypeAllowed('x blah')).not.toThrow();
+  });
+
+  test('rejects symlink and hardlink rows', () => {
+    expect(() =>
+      assertTarVerboseListingTypeAllowed('lrwxrwxrwx 0 u g 0 2000-01-01 00:00 s -> t')
+    ).toThrow(/disallowed tar entry type/);
+    expect(() =>
+      assertTarVerboseListingTypeAllowed('hrw-r--r-- 0 u g 0 2000-01-01 00:00 f2 link to f1')
+    ).toThrow(/disallowed tar entry type/);
+  });
+});
+
+describe('assert7zSltMemberSectionSafe', () => {
+  test('allows normal sections', () => {
+    expect(() =>
+      assert7zSltMemberSectionSafe('Path = a.txt\nSize = 1\nAttributes = A_ -rw-r--r--\n')
+    ).not.toThrow();
+  });
+
+  test('rejects SymLink = +', () => {
+    expect(() => assert7zSltMemberSectionSafe('Path = s\nSymLink = +\n')).toThrow(
+      /symbolic-link member/
+    );
+  });
+
+  test('rejects Hard = +', () => {
+    expect(() => assert7zSltMemberSectionSafe('Path = h\nHard = +\n')).toThrow(
+      /hard-linked member/
+    );
+  });
+});
+
+describe('assertTarMemberPathsSafe', () => {
+  test('allows archives with only files', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'tar-ok-'));
+    const arc = path.join(dir, 'a.tgz');
+    try {
+      await fs.writeFile(path.join(dir, 'f'), 'x');
+      await execFileAsync('tar', ['-czf', arc, '-C', dir, 'f']);
+      await expect(assertTarMemberPathsSafe(arc, dir)).resolves.toBeUndefined();
+    } finally {
+      await fs.rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('rejects archives that list symlink members', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'tar-bad-sym-'));
+    const arc = path.join(dir, 'a.tgz');
+    try {
+      await fs.writeFile(path.join(dir, 'f'), 'x');
+      await fs.symlink('f', path.join(dir, 's'));
+      await execFileAsync('tar', ['-czf', arc, '-C', dir, 'f', 's']);
+      await expect(assertTarMemberPathsSafe(arc, dir)).rejects.toThrow(/disallowed tar entry type/);
+    } finally {
+      await fs.rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('rejects archives that list hard-linked members', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'tar-bad-hl-'));
+    const arc = path.join(dir, 'a.tgz');
+    try {
+      const f1 = path.join(dir, 'f1');
+      await fs.writeFile(f1, 'x');
+      await fs.link(f1, path.join(dir, 'f2'));
+      await execFileAsync('tar', ['-czf', arc, '-C', dir, 'f1', 'f2']);
+      await expect(assertTarMemberPathsSafe(arc, dir)).rejects.toThrow(/disallowed tar entry type/);
+    } finally {
+      await fs.rm(dir, { recursive: true, force: true });
+    }
   });
 });
 
@@ -107,6 +197,21 @@ describe('assertExtractedTreeHasNoSymlinks', () => {
       await fs.writeFile(a, 'x');
       await fs.link(a, b);
       await expect(assertExtractedTreeHasNoSymlinks(dir)).rejects.toThrow(/hard-linked file/);
+    } finally {
+      await fs.rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('rejects FIFO special files', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'fifo-extract-'));
+    const fifo = path.join(dir, 'p');
+    try {
+      await execFileAsync('mkfifo', [fifo]);
+    } catch {
+      return;
+    }
+    try {
+      await expect(assertExtractedTreeHasNoSymlinks(dir)).rejects.toThrow(/disallowed node type/);
     } finally {
       await fs.rm(dir, { recursive: true, force: true });
     }
