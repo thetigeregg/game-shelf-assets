@@ -19,6 +19,7 @@ import {
   assertExtractedTreeHasNoSymlinks,
   assertTarMemberPathsSafe,
   gnuTarExtractSafetyFlags,
+  normalizeArchiveMemberPath,
 } from './lib/safe-archive-extract.mjs';
 import { runWithInherit } from './lib/run-with-inherit.mjs';
 
@@ -31,6 +32,11 @@ const sourceSubdir = args.sourceSubdir ?? config.sourceSubdir;
 
 if (!version || !sourceUrl || !sourceSubdir) {
   throw new Error('version, sourceUrl, and sourceSubdir are required');
+}
+
+const sourceSubdirNorm = normalizeArchiveMemberPath(sourceSubdir);
+if (!sourceSubdirNorm) {
+  throw new Error('sourceSubdir is required');
 }
 
 /** @param {Response} response @param {string} destPath */
@@ -70,8 +76,8 @@ try {
 
   await assertExtractedTreeHasNoSymlinks(extractDir);
 
-  assertArchiveMemberInsideExtractDir(extractDir, sourceSubdir);
-  const sourcePath = path.join(extractDir, sourceSubdir);
+  assertArchiveMemberInsideExtractDir(extractDir, sourceSubdirNorm);
+  const sourcePath = path.join(extractDir, sourceSubdirNorm);
   if (!(await pathExists(sourcePath))) {
     throw new Error(`sourceSubdir does not exist in archive: ${sourceSubdir}`);
   }

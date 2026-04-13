@@ -11,6 +11,7 @@ import {
   assertTarMemberPathsSafe,
   assertTarVerboseListingTypeAllowed,
   memberPathsFrom7zSltListing,
+  normalizeArchiveMemberPath,
 } from '../scripts/lib/safe-archive-extract.mjs';
 
 const execFileAsync = promisify(execFile);
@@ -51,6 +52,16 @@ describe('assertArchiveMemberInsideExtractDir', () => {
   test('ignores empty lines', () => {
     expect(() => assertArchiveMemberInsideExtractDir(root, '   ')).not.toThrow();
     expect(() => assertArchiveMemberInsideExtractDir(root, '')).not.toThrow();
+  });
+});
+
+describe('normalizeArchiveMemberPath for sourceSubdir', () => {
+  test('normalizes backslashes so path.join(extractDir, …) matches validation on POSIX', () => {
+    const extractDir = '/tmp/emulatorjs-extract-xyz';
+    const raw = 'data\\stable';
+    const norm = normalizeArchiveMemberPath(raw);
+    expect(norm).toBe('data/stable');
+    expect(path.join(extractDir, norm)).toBe(path.join(extractDir, 'data', 'stable'));
   });
 });
 
