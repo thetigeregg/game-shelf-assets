@@ -41,7 +41,7 @@ jobs:
             --pagesOutDir ".pages-dist"
       - name: Configure GitHub Pages
         if: ${{ inputs.dryRun == false }}
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
       - name: Upload Pages artifact
         if: ${{ inputs.dryRun == false }}
         uses: actions/upload-pages-artifact@v4
