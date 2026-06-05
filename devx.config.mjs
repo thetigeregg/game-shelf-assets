@@ -4,6 +4,9 @@ export default {
   baseBranch: 'main',
   worktreeRoot: 'worktrees',
   packageDirs: ['.'],
+  editor: {
+    command: 'code',
+  },
   pr: {
     baseRef: 'origin/main',
     prepOutputFile: 'prompts/pr-prep-prompt.md',
