@@ -23,7 +23,7 @@
     "@thetigeregg/lint-staged-config": "^1.0.0",
     "@thetigeregg/ncu-config": "^2.0.0",
     "@thetigeregg/prettier-config": "^1.0.0",
-    "@types/node": "^24.13.0",
+    "@types/node": "^24.13.1",
     "husky": "^9.1.7",
     "lint-staged": "^17.0.7",
     "npm-check-updates": "^22.2.2",
