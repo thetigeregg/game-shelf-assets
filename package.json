@@ -19,7 +19,7 @@
   "devDependencies": {
     "@commitlint/cli": "^21.0.2",
     "@thetigeregg/commitlint-config": "^1.0.2",
-    "@thetigeregg/dev-cli": "^4.1.2",
+    "@thetigeregg/dev-cli": "^4.2.0",
     "@thetigeregg/lint-staged-config": "^1.0.0",
     "@thetigeregg/ncu-config": "^2.0.0",
     "@thetigeregg/prettier-config": "^1.0.0",
