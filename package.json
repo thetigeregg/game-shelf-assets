@@ -17,17 +17,17 @@
     "prepare": "husky"
   },
   "devDependencies": {
-    "@commitlint/cli": "^21.0.2",
-    "@thetigeregg/commitlint-config": "^1.0.2",
+    "@commitlint/cli": "^21.1.0",
+    "@thetigeregg/commitlint-config": "^1.0.3",
     "@thetigeregg/dev-cli": "^4.2.0",
     "@thetigeregg/lint-staged-config": "^1.0.0",
     "@thetigeregg/ncu-config": "^2.0.0",
     "@thetigeregg/prettier-config": "^1.0.0",
-    "@types/node": "^24.13.0",
+    "@types/node": "^24.13.2",
     "husky": "^9.1.7",
     "lint-staged": "^17.0.8",
-    "npm-check-updates": "^22.2.7",
-    "prettier": "^3.8.4",
+    "npm-check-updates": "^22.2.9",
+    "prettier": "^3.9.3",
     "typescript": "^6.0.3",
     "vitest": "^4.1.9"
   }
