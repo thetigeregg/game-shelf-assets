@@ -16,4 +16,9 @@ export default {
     coverageArtifactName: 'coverage-reports',
     verifyCommands: ['npm run lint', 'npm test', 'npm run verify:all'],
   },
+  worktree: {
+    bootstrap: {
+      installScript: 'deps:install:all',
+    },
+  },
 };
