@@ -14,6 +14,7 @@
     "artifact:fetch:emulatorjs": "node scripts/fetch-emulatorjs.mjs",
     "artifact:release:emulatorjs": "node scripts/release-emulatorjs.mjs --artifact emulatorjs",
     "verify:all": "node scripts/verify-manifest.mjs --all",
+    "deps:install:all": "npm ci",
     "prepare": "husky"
   },
   "devDependencies": {
